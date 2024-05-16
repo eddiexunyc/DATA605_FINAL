@@ -22,15 +22,15 @@ head(training_data)
 
 Pick one of the quantitative independent variables from the training data set (train.csv), and define that variable as X. Make sure this variable is skewed to the right! Pick the dependent variable and define it as Y.
 
-*For the quantitative variable, Total rooms above grade (does not include bathrooms) will be defined as X. For the dependent variable, the Sale Price will be defined as Y.*
+*For the quantitative independent variable, the Lot size in square feet will be defined as the variable X and for the dependable variable, the Sale Price will be defined as the variable Y.*
 ```{r variable, message=FALSE, warning=FALSE}
 # histogram
-variable_x_histgram <- ggplot(training_data,aes(x = GrLivArea)) +
+variable_x_histgram <- ggplot(training_data,aes(x = LotArea)) +
   geom_histogram() +
   theme_minimal()
 
-# set the total rooms above grade (does not include bathrooms) as x and Sale Price as y
-variable_x <- training_data$GrLivArea
+# set the Lot Area as x and Sale Price as y
+variable_x <- training_data$LotArea
 variable_y <- training_data$SalePrice
 
 # histogram plot
@@ -49,7 +49,7 @@ variable_x_summary
 variable_y_summary
 ```
 
-*Based on both summaries, the third quartile of the variable x is 1777 and the second quartile or median of the variable y is 163000. By following the formula for conditional probability, the value can be defined for each probability.*
+*Based on both summaries, the third quartile of the variable X is 11602 and the second quartile or median of the variable Y is 163000. By following the formula for conditional probability, the value can be defined for each probability.*
 ```{r}
 # 3rd quartile of x and 2nd quartile of y
 x_prob_quartile <- round(variable_x_summary["3rd Qu."])
@@ -57,11 +57,7 @@ y_prob_quartile <- round(variable_y_summary["Median"])
 
 # probability a function
 prob_a_func <- function(x, y, xp, yp){
-  result_a <- x > xp
-  result_b <- x > yp
-  result_c <- sum(result_a & result_b)
-  result_d <- sum(result_b)
-  result <- result_c / result_d
+  result <- sum(x > xp & x > yp) / sum(x > yp)
   return(result)
 }
 
@@ -96,7 +92,31 @@ prob_c_value <- prob_c_func(variable_x, variable_y, x_prob_quartile, y_prob_quar
 prob_c_value
 ```
 
+```{r table_count, message=FALSE, warning=FALSE}
+# values per calculation
+sum(variable_x > xp & x > yp)
+
+# input values into the table matrix
+
+```
+
 Does splitting the training data in this fashion make them independent? Let A be the new variable counting those observations above the 3d quartile for X, and let B be the new variable counting those observations above the 2d quartile for Y. Does P(A|B)=P(A)P(B)? Check mathematically, and then evaluate by running a Chi Square test for association.
+
+$$P(A|B) = P(A)P(B) \\ P(A|B) = P(A) \\ P(A|B) = P(A)P(B) \\ \; \text{(if and only A and B independent based on the behavior of conditional probabilities)}$$
+
+*Based on the mathematics formula, the variables are independent. The Chi-Square test will be used to evaluate if that is the case. Our hypothesis is based on the following:*
+
+$$H_{\theta} = \text{Sale Price and Lot Size are independent}$$
+
+$$H_{1} = \text{Sale Price and Lot Size are dependent}$$
+
+```{r chi_test_comparison, message=FALSE, warning=FALSE}
+chi_result <- chisq.test(variable_x, variable_y)
+
+chi_result
+```
+
+*Based on the result and the critical value for the chi-square test is typically 0.05, the p-value is greater than the critical value. From there, the test rejected the mathametic evaluation and the null hypothesis is rejected.*
 
 #### Descriptive and Inferential Statistics
 Provide univariate descriptive statistics and appropriate plots for the training data set. Provide a scatter plot of X and Y. Provide a 95% CI for the difference in the mean of the variables. Derive a correlation matrix for two of the quantitative variables you selected. Test the hypothesis that the correlation between these variables is 0 and provide a 99% confidence interval. Discuss the meaning of your analysis.
