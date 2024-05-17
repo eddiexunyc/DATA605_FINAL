@@ -1,0 +1,114 @@
+```{r training_stat_sum, message=FALSE, warning=FALSE}
+# summary statistics on the training data
+print(summary(training_data))
+```
+
+*In order to predict the sale price for each house, the Sale Price will be used as the dependent variable.*
+```{r num_train_table, message=FALSE, warning=FALSE}
+# pull in all columns with numeric values
+training_data_num <- training_data %>%
+  select(where(is.numeric))
+
+# summary
+summary(training_data_num)
+```
+
+*By pulling all columns with numeric values, it can provide a better perspective in the training set using appropriate plots. In this case, the box plot and histograms are best methods to compare all variables.*
+
+##### Box Plot Part 1
+```{r var_boxplot, message=FALSE, warning=FALSE}
+# boxplot
+par(mfrow=c(2,3))
+boxplot(training_data_num$MSSubClass, xlab = "The building class")
+boxplot(training_data_num$LotFrontage, xlab = "Linear feet of street connected to property")
+boxplot(training_data_num$LotArea, xlab = "Lot size in square feet")
+boxplot(training_data_num$OverallQual, xlab = "Overall material and finish quality")
+boxplot(training_data_num$OverallCond, xlab = "Overall condition rating")
+boxplot(training_data_num$MasVnrArea, xlab = "Masonry veneer area in square feet")
+```
+
+##### Box Plot Part 2
+```{r var_boxplot2, message=FALSE, warning=FALSE}
+# box plot part 2
+par(mfrow=c(2,3))
+boxplot(training_data_num$BsmtFinSF1, xlab = "Type 1 finished square feet")
+boxplot(training_data_num$BsmtFinSF2, xlab = "Type 2 finished square feet")
+boxplot(training_data_num$BsmtUnfSF, xlab = "Unfinished square feet of basement area")
+boxplot(training_data_num$TotalBsmtSF, xlab = "Overall material and finish quality")
+boxplot(training_data_num$X1stFlrSF, xlab = "First Floor square feet")
+boxplot(training_data_num$X2ndFlrSF, xlab = "Second Floor square feet")
+```
+
+##### Box Plot Part 3
+```{r var_boxplot3, message=FALSE, warning=FALSE}
+# box plot part 3
+par(mfrow=c(2,3))
+boxplot(training_data_num$LowQualFinSF, xlab = "Low quality finished square feet (all floors)")
+boxplot(training_data_num$GrLivArea, xlab = "Above grade (ground) living area square feet")
+boxplot(training_data_num$BsmtFullBath, xlab = "Basement full bathrooms")
+boxplot(training_data_num$BsmtHalfBath, xlab = "Basement half bathrooms")
+boxplot(training_data_num$FullBath, xlab = "Full bathrooms above grade")
+boxplot(training_data_num$HalfBath, xlab = "Half baths above grade")
+```
+
+##### Box Plot Part 4
+```{r var_boxplot4, message=FALSE, warning=FALSE}
+# boxplot part 4
+par(mfrow=c(2,3))
+boxplot(training_data_num$BedroomAbvGr, xlab = "Number of bedrooms above basement level")
+boxplot(training_data_num$KitchenAbvGr, xlab = "Number of kitchens")
+boxplot(training_data_num$TotRmsAbvGrd, xlab = "Total rooms above grade (does not include bathrooms)")
+boxplot(training_data_num$Fireplaces, xlab = "Number of fireplaces")
+boxplot(training_data_num$GarageCars, xlab = "Size of garage in car capacity")
+boxplot(training_data_num$GarageArea, xlab = "Size of garage in square feet")
+```
+
+##### Box Plot Part 5
+```{r var_boxplot5, message=FALSE, warning=FALSE}
+# boxplot part 5
+par(mfrow=c(2,3))
+boxplot(training_data_num$WoodDeckSF, xlab = "Wood deck area in square feet")
+boxplot(training_data_num$OpenPorchSF, xlab = "Open porch area in square feet")
+boxplot(training_data_num$EnclosedPorch, xlab = "Enclosed porch area in square feet")
+boxplot(training_data_num$X3SsnPorch, xlab = "Three season porch area in square feet")
+boxplot(training_data_num$ScreenPorch, xlab = "Screen porch area in square feet")
+boxplot(training_data_num$PoolArea, xlab = "Pool area in square feet")
+```
+
+##### Box Plot Part 6
+```{r var_boxplot6, message=FALSE, warning=FALSE}
+# boxplot part 6
+par(mfrow=c(1,2))
+boxplot(training_data_num$MiscVal, xlab = "$ Value of miscellaneous feature")
+boxplot(training_data_num$SalePrice, xlab = "Sale Price")
+```
+
+##### Histogram
+```{r var_histogram, message=FALSE, warning=FALSE}
+# histogram
+par(mfrow=c(2,3))
+hist(training_data_num$YearBuilt, border=F , col=rgb(0.2,0.2,0.8,0.7), xlab = "Original construction date")
+hist(training_data_num$YearRemodAdd, border=F , col=rgb(0.2,0.2,0.8,0.7), xlab = "Remodel date")
+hist(training_data_num$GarageYrBlt, border=F , col=rgb(0.2,0.2,0.8,0.7), xlab = "Year garage was built")
+hist(training_data_num$MoSold, border=F , col=rgb(0.2,0.2,0.8,0.7), xlab = "Month Sold")
+hist(training_data_num$YrSold, border=F , col=rgb(0.2,0.2,0.8,0.7), xlab = "Year Sold")
+```
+
+*Given that the dependent is the Sale price, the independent variables are GrLivArea (Above grade (ground) living area square feet) and MiscVal ($Value of miscellaneous feature).*
+```{r ind_var_scatter_grid, message=FALSE, warning=FALSE}
+# new dataset with Sale Price, Ground living area and Miscellaneous feature value
+housing_var_data <- training_data_num %>%
+  select(SalePrice, GrLivArea, MiscVal)
+```
+
+```{r heat_map_housing, message=FALSE, warning=FALSE}
+# create a cormat and melted cormat
+housing_cormat <- round(cor(housing_var_data), 2)
+melted_obesity_cormat <- melt(housing_cormat)
+
+# create a heat map
+ggplot(data = melted_obesity_cormat, aes(x=Var1, y=Var2, fill=value)) + 
+  geom_tile() +
+  geom_text(aes(label = round(value, 1))) +
+  theme_minimal()
+```

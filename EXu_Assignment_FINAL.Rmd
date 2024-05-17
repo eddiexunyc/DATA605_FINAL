@@ -9,15 +9,19 @@ output: html_document
 Your final is due by the end of day on 19 May This project will show off your ability to understand the elements of the class. You are to register for Kaggle.com (free) and compete in the House Prices: Advanced Regression Techniques competition. https://www.kaggle.com/c/house-prices-advanced-regression-techniques. I want you to do the following.
 
 #### Load Dependencies
-```{r load_dep_data, message=FALSE}
-# data wrangling
+```{r load_dep_data, message=FALSE, warning=FALSE}
+# load libraries
 library(tidyverse)
+library(infer)
+library(ggfortify)
+library(reshape2)
+library(reactable)
 
 # load data
 training_data <- read.csv("https://raw.githubusercontent.com/eddiexunyc/DATA605_FINAL/main/Resources/train.csv")
 
 # view train data
-head(training_data)
+reactable(training_data)
 ```
 
 Pick one of the quantitative independent variables from the training data set (train.csv), and define that variable as X. Make sure this variable is skewed to the right! Pick the dependent variable and define it as Y.
@@ -26,7 +30,7 @@ Pick one of the quantitative independent variables from the training data set (t
 ```{r variable, message=FALSE, warning=FALSE}
 # histogram
 variable_x_histgram <- ggplot(training_data,aes(x = LotArea)) +
-  geom_histogram() +
+  geom_histogram(colour = 4, fill = "white") +
   theme_minimal()
 
 # set the Lot Area as x and Sale Price as y
@@ -39,22 +43,50 @@ variable_x_histgram
 
 #### Probability
 Calculate as a minimum the below probabilities a through c. Assume the small letter "x" is estimated as the third quartile of the X variable, and the small letter "y" is estimated as the second quartile of the Y variable. Interpret the meaning of all probabilities. In addition, make a table of counts as shown below.
-
 ```{r summary_variable, message=FALSE}
 variable_x_summary <- summary(variable_x)
 variable_y_summary <- summary(variable_y)
+
+# 3rd quartile of x and 2nd quartile of y
+x_prob_quartile <- round(variable_x_summary["3rd Qu."])
+y_prob_quartile <- round(variable_y_summary["Median"])
 
 # print
 variable_x_summary
 variable_y_summary
 ```
 
-*Based on both summaries, the third quartile of the variable X is 11602 and the second quartile or median of the variable Y is 163000. By following the formula for conditional probability, the value can be defined for each probability.*
-```{r}
-# 3rd quartile of x and 2nd quartile of y
-x_prob_quartile <- round(variable_x_summary["3rd Qu."])
-y_prob_quartile <- round(variable_y_summary["Median"])
+*Based on both summaries, the third quartile of the variable X is 11602 and the second quartile or median of the variable Y is 163000.*
+```{r count_table, message=FALSE, warning=FALSE}
+# calculation on less than 3rd quartile
+both_less_qrt <- sum(variable_x < x_prob_quartile & variable_y < y_prob_quartile)
+y_greater_qrt <- sum(variable_x < x_prob_quartile & variable_y > y_prob_quartile)
 
+# calculation on more than 3rd quartile
+both_great_qrt <- sum(variable_x > x_prob_quartile & variable_y > y_prob_quartile)
+y_less_qrt <- sum(variable_x > x_prob_quartile & variable_y < y_prob_quartile)
+
+# calculation on total
+less_3qrt_total <- both_less_qrt + y_greater_qrt
+great_3qrt_total <- both_great_qrt + y_less_qrt
+less_2qrt_total <- both_less_qrt + y_less_qrt
+great_2qrt_total <- both_great_qrt + y_greater_qrt
+grand_total <- less_3qrt_total + great_3qrt_total
+
+# input values into the table matrix
+table_matrix <- matrix(c(both_less_qrt, y_greater_qrt, less_3qrt_total,
+                         y_less_qrt, both_great_qrt, great_3qrt_total,
+                         less_2qrt_total, great_2qrt_total, grand_total), 
+                       nrow = 3, ncol = 3, byrow = TRUE)
+
+colnames(table_matrix) <- c("less than 2nd quartile", "greater than 2nd quartile", "Total")
+rownames(table_matrix) <- c("less than 3rd quartile", "greater than 3rd quartile", "Total")
+
+table_matrix
+```
+
+*Based on the table, there are 1456 counts of potential outcomes. The count of less than 2nd quartile or greater than 2nd quartile is exactly the same; 728 counts. There is a higher count of less than 3rd quantile (1091) than the count of greater than 3rd quantile (365). By following the formula for conditional probability, the value can be defined for each probability.*
+```{r prob_func, message=FALSE, warning=FALSE}
 # probability a function
 prob_a_func <- function(x, y, xp, yp){
   result <- sum(x > xp & x > yp) / sum(x > yp)
@@ -92,14 +124,6 @@ prob_c_value <- prob_c_func(variable_x, variable_y, x_prob_quartile, y_prob_quar
 prob_c_value
 ```
 
-```{r table_count, message=FALSE, warning=FALSE}
-# values per calculation
-sum(variable_x > xp & x > yp)
-
-# input values into the table matrix
-
-```
-
 Does splitting the training data in this fashion make them independent? Let A be the new variable counting those observations above the 3d quartile for X, and let B be the new variable counting those observations above the 2d quartile for Y. Does P(A|B)=P(A)P(B)? Check mathematically, and then evaluate by running a Chi Square test for association.
 
 $$P(A|B) = P(A)P(B) \\ P(A|B) = P(A) \\ P(A|B) = P(A)P(B) \\ \; \text{(if and only A and B independent based on the behavior of conditional probabilities)}$$
@@ -116,22 +140,48 @@ chi_result <- chisq.test(variable_x, variable_y)
 chi_result
 ```
 
-*Based on the result and the critical value for the chi-square test is typically 0.05, the p-value is greater than the critical value. From there, the test rejected the mathametic evaluation and the null hypothesis is rejected.*
+*Based on the result and the critical value for the chi-square test is typically 0.05, the p-value is greater than the critical value. From there, the test rejected the mathematics evaluation and the null hypothesis is rejected.*
 
 #### Descriptive and Inferential Statistics
 Provide univariate descriptive statistics and appropriate plots for the training data set. Provide a scatter plot of X and Y. Provide a 95% CI for the difference in the mean of the variables. Derive a correlation matrix for two of the quantitative variables you selected. Test the hypothesis that the correlation between these variables is 0 and provide a 99% confidence interval. Discuss the meaning of your analysis.
 
+```{r scatter_plot_xy, message=FALSE, warning=FALSE}
+ggplot(training_data, aes(x = variable_x, y = variable_y, color = variable_y)) +
+  geom_point() +
+  theme_minimal() +
+  xlab("Above grade (ground) living area square feet") +
+  ylab("Sale Price") +
+  ggtitle("Scatter plot between Above grade living area square feet & Sale Price")
+```
+
+*As shown in the plot, *
+
+```{r infer_x, message=FALSE, warning=FALSE}
+# inference on variable X based on the confidence level of 95%
+variable_x %>%
+  specify(response = obesity, success = "yes") %>%
+  generate(reps = 1000, type = "bootstrap") %>%
+  calculate(stat = "prop") %>%
+  get_ci(level = 0.95)
+```
+
 #### Linear Algebra and Correlation
 Invert your correlation matrix. (This is known as the precision matrix and contains variance inflation factors on the diagonal.) Multiply the correlation matrix by the precision matrix, and then multiply the precision matrix by the correlation matrix. Conduct principle components analysis (research this!) and interpret. Discuss.
+```{r}
+
+```
 
 #### Calculus-Based Probability & Statistics
-Many times, it makes sense to fit a closed form distribution to data. For your variable that is skewed to the right, shift it so that the minimum value is above zero. Then load the MASS package and run fitdistr to fit an exponential probability density function. (See  https://stat.ethz.ch/R-manual/R-devel/library/MASS/html/fitdistr.html). Find the optimal value of  for this distribution, and then take 1000 samples from this exponential distribution using this value (e.g., rexp(1000, )). Plot a histogram and compare it with a histogram of your original variable.   Using the exponential pdf, find the 5th and 95th percentiles using the cumulative distribution function (CDF). Also generate a 95% confidence interval from the empirical data, assuming normality. Finally, provide the empirical 5th percentile and 95th percentile of the data. Discuss.
+Many times, it makes sense to fit a closed form distribution to data. For your variable that is skewed to the right, shift it so that the minimum value is above zero. Then load the MASS package and run fitdistr to fit an exponential probability density function. (See  https://stat.ethz.ch/R-manual/R-devel/library/MASS/html/fitdistr.html). Find the optimal value for this distribution, and then take 1000 samples from this exponential distribution using this value (e.g., rexp(1000)). Plot a histogram and compare it with a histogram of your original variable. Using the exponential pdf, find the 5th and 95th percentiles using the cumulative distribution function (CDF). Also generate a 95% confidence interval from the empirical data, assuming normality. Finally, provide the empirical 5th percentile and 95th percentile of the data. Discuss.
+```{r}
+
+```
 
 #### Modeling
 Build some type of regression  model and submit your model to the competition board. Provide your complete model summary and results with analysis. Report your Kaggle.com user name and score.
+```{r}
 
-
-
+```
 
 
 
