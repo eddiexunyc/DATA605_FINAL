@@ -12,10 +12,10 @@ Your final is due by the end of day on 19 May This project will show off your ab
 ```{r load_dep_data, message=FALSE, warning=FALSE}
 # load libraries
 library(tidyverse)
-library(infer)
-library(ggfortify)
-library(reshape2)
 library(reactable)
+library(DescTools)
+library(reshape2)
+library(MASS)
 
 # load data
 training_data <- read.csv("https://raw.githubusercontent.com/eddiexunyc/DATA605_FINAL/main/Resources/train.csv")
@@ -130,13 +130,10 @@ $$P(A|B) = P(A)P(B) \\ P(A|B) = P(A) \\ P(A|B) = P(A)P(B) \\ \; \text{(if and on
 
 *Based on the mathematics formula, the variables are independent. The Chi-Square test will be used to evaluate if that is the case. Our hypothesis is based on the following:*
 
-$$H_{\theta} = \text{Sale Price and Lot Size are independent}$$
-
-$$H_{1} = \text{Sale Price and Lot Size are dependent}$$
+$$H_{\theta} = \text{Sale Price and Lot Size are independent} \\ H_{1} = \text{Sale Price and Lot Size are dependent}$$
 
 ```{r chi_test_comparison, message=FALSE, warning=FALSE}
 chi_result <- chisq.test(variable_x, variable_y)
-
 chi_result
 ```
 
@@ -144,37 +141,123 @@ chi_result
 
 #### Descriptive and Inferential Statistics
 Provide univariate descriptive statistics and appropriate plots for the training data set. Provide a scatter plot of X and Y. Provide a 95% CI for the difference in the mean of the variables. Derive a correlation matrix for two of the quantitative variables you selected. Test the hypothesis that the correlation between these variables is 0 and provide a 99% confidence interval. Discuss the meaning of your analysis.
-
 ```{r scatter_plot_xy, message=FALSE, warning=FALSE}
 ggplot(training_data, aes(x = variable_x, y = variable_y, color = variable_y)) +
   geom_point() +
+  geom_smooth(method=lm) +
   theme_minimal() +
-  xlab("Above grade (ground) living area square feet") +
+  xlab("Lot size in square feet ") +
   ylab("Sale Price") +
-  ggtitle("Scatter plot between Above grade living area square feet & Sale Price")
+  ggtitle("Scatter plot between Lot size in square feet & Sale Price")
 ```
 
-*As shown in the plot, *
-
-```{r infer_x, message=FALSE, warning=FALSE}
+*As shown in the plot, there is a good indication that Lot size in square feet and Sale Price are independent from each other. There are some outliners that helps support that indication.*
+```{r infer_ci, message=FALSE, warning=FALSE}
 # inference on variable X based on the confidence level of 95%
-variable_x %>%
-  specify(response = obesity, success = "yes") %>%
-  generate(reps = 1000, type = "bootstrap") %>%
-  calculate(stat = "prop") %>%
-  get_ci(level = 0.95)
+MeanDiffCI(variable_x, variable_y, conf.level = 0.95)
 ```
+
+*Given the 95% confidence interval for the difference in the mean of the variables, the lower bound is -174515 and the upper bound is -166294.*
+```{r corr_matrix_map, message=FALSE, warning=FALSE}
+# new dataset with variable x and y
+corr_var <- cbind(variable_x, variable_y) %>%
+  as.matrix()
+
+# create a cormat and melted cormat
+housing_cormat <- round(cor(corr_var), 2)
+melted_housing_cormat <- melt(housing_cormat)
+
+# create a heat map
+ggplot(data = melted_housing_cormat, aes(x=Var1, y=Var2, fill=value)) + 
+  geom_tile(color = "white",
+            lwd = 1.5,
+            linetype = 1) +
+  geom_text(aes(label = round(value, 2)), color = "white", size = 4) +
+  theme_minimal()
+```
+
+*Based on the plot, it shows that the two variables are more independent. So going back to the hypothesis stated before, testings need to be done to see if the null hypothesis is correct.*
+
+$$H_{\theta} = \text{Sale Price and Lot Size are independent} \\ H_{1} = \text{Sale Price and Lot Size are dependent}$$
+
+```{r}
+corr_test <- cor.test(training_data$LotArea, training_data$SalePrice, method = "pearson", conf.level = 0.99)
+corr_test
+```
+
+*Using the Pearson method to measure the degree of the relationship between LotArea and SalePrice, the p-value is less than 2.2e-16 which is close to 0 and less than the 99% confidence interval. This once again rejected the null hypothesis and shows that LotArea and SalePrice are significantly correlated with a correlation coefficient of 0.264.*
 
 #### Linear Algebra and Correlation
 Invert your correlation matrix. (This is known as the precision matrix and contains variance inflation factors on the diagonal.) Multiply the correlation matrix by the precision matrix, and then multiply the precision matrix by the correlation matrix. Conduct principle components analysis (research this!) and interpret. Discuss.
-```{r}
+```{r precision_matrix, message=FALSE, warning=FALSE}
+# inverted correlation matrix
+precision_corr <- solve(housing_cormat)
+melted_precision_cormat <- melt(precision_corr)
 
+# create a heat map
+ggplot(data = melted_precision_cormat, aes(x=Var1, y=Var2, fill=value)) + 
+  geom_tile(color = "white",
+            lwd = 1.5,
+            linetype = 1) +
+  geom_text(aes(label = round(value, 2)), color = "white", size = 4) +
+  theme_minimal()
+```
+
+```{r mulitple1, message=FALSE, warning=FALSE}
+# multiplication of correlation matrix and precision matrix
+corr_prec1_matrix <- housing_cormat %*% precision_corr
+melted_corr_prec1 <- melt(corr_prec1_matrix)
+
+# create a heat map
+ggplot(data = melted_corr_prec1, aes(x=Var1, y=Var2, fill=value)) + 
+  geom_tile(color = "white",
+            lwd = 1.5,
+            linetype = 1) +
+  geom_text(aes(label = round(value, 3)), color = "white", size = 4) +
+  theme_minimal()
+```
+
+```{r mulitple2, message=FALSE, warning=FALSE}
+# multiplication of correlation matrix and precision matrix
+corr_prec2_matrix <- precision_corr %*% housing_cormat
+melted_corr_prec2 <- melt(corr_prec2_matrix)
+
+# create a heat map
+ggplot(data = melted_corr_prec2, aes(x=Var1, y=Var2, fill=value)) + 
+  geom_tile(color = "white",
+            lwd = 1.5,
+            linetype = 1) +
+  geom_text(aes(label = round(value, 3)), color = "white", size = 4) +
+  theme_minimal()
+```
+
+```{r pca_analysis, message=FALSE, warning=FALSE}
+# principle components analysis 
 ```
 
 #### Calculus-Based Probability & Statistics
 Many times, it makes sense to fit a closed form distribution to data. For your variable that is skewed to the right, shift it so that the minimum value is above zero. Then load the MASS package and run fitdistr to fit an exponential probability density function. (See  https://stat.ethz.ch/R-manual/R-devel/library/MASS/html/fitdistr.html). Find the optimal value for this distribution, and then take 1000 samples from this exponential distribution using this value (e.g., rexp(1000)). Plot a histogram and compare it with a histogram of your original variable. Using the exponential pdf, find the 5th and 95th percentiles using the cumulative distribution function (CDF). Also generate a 95% confidence interval from the empirical data, assuming normality. Finally, provide the empirical 5th percentile and 95th percentile of the data. Discuss.
 ```{r}
+# run fitdistr function and extract the lambda value
+exp_variable_x <- fitdistr(variable_x, "exponential")
+lambda_x <- exp_variable_x$estimate
 
+# 1000 samples from the exponential distribution
+sample_size <- 1000
+sample_x <- rexp(sample_size, rate = lambda_x) %>%
+  as.data.frame()
+colnames(sample_x) <- c("sample_value")
+
+
+exp_variable_x_histogram <- ggplot(sample_x,aes(x = sample_value)) +
+  geom_histogram(colour = 4, fill = "white") +
+  theme_minimal() 
+
+
+#plot between the original and exponential
+par(mfrow=c(1,2))
+variable_x_histgram + ggtitle("Original Distribution")
+exp_variable_x_histogram + ggtitle("Exponential Distribution")
 ```
 
 #### Modeling
