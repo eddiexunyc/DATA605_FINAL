@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ### Final
-Your final is due by the end of day on 19 May This project will show off your ability to understand the elements of the class. You are to register for Kaggle.com (free) and compete in the House Prices: Advanced Regression Techniques competition. https://www.kaggle.com/c/house-prices-advanced-regression-techniques. I want you to do the following.
+Your final is due by the end of day on 19 May This project will show off your ability to understand the elements of the class. You are to register for Kaggle.com (free) and compete in the House Prices: Advanced Regression Techniques competition, [Kaggle Link](https://www.kaggle.com/c/house-prices-advanced-regression-techniques). I want you to do the following.
 
 #### Load Dependencies
 ```{r load_dep_data, message=FALSE, warning=FALSE}
@@ -16,6 +16,8 @@ library(reactable)
 library(DescTools)
 library(reshape2)
 library(MASS)
+library(devtools)
+library(ggbiplot)
 
 # load data
 training_data <- read.csv("https://raw.githubusercontent.com/eddiexunyc/DATA605_FINAL/main/Resources/train.csv")
@@ -231,12 +233,38 @@ ggplot(data = melted_corr_prec2, aes(x=Var1, y=Var2, fill=value)) +
   theme_minimal()
 ```
 
+*Given that the correlation between both variables are not that highly correlated and to see the variable is truly independent from each other, the principle components analysis will be used to determine that. Principle Components Analysis is used for making decisions in predictive models and dimensionality reduction by using each data point onto only the few principal components. [R-blogger Link](https://www.r-bloggers.com/2021/05/principal-component-analysis-pca-in-r/) will be used as reference. *
 ```{r pca_analysis, message=FALSE, warning=FALSE}
-# principle components analysis 
+# principle components analysis
+pca_var <- prcomp(corr_var, center = TRUE, scale. = TRUE)
+
+summary(pca_var)
 ```
 
+*The PCA summary shows that the PC1 captures 63% which is more than half of variability and PC2 captures 37% of the variability.*
+```{r pca_biplot1, message=FALSE, warning=FALSE}
+pca_plot1 <- ggscreeplot(pca_var) +
+  theme_minimal()
+
+pca_plot1
+```
+
+*The screeplot shows that PC1 is necessary to account for most of the variance*
+```{r pca_biplot2, message=FALSE, warning=FALSE}
+pca_plot2 <- ggbiplot(pca_var, obs.scale = 1, var.scale = 1,
+                     var.factor = 1.2,
+                     ellipse = TRUE, ellipse.level = 0.5, ellipse.alpha = 0.1,
+                     circle = TRUE, varname.size = 3, varname.color = "lightblue") + 
+  theme(legend.direction = 'horizontal', legend.position = 'top') +
+  theme_minimal()
+
+pca_plot2
+```
+
+*Based on the PCA biplot, it shows how variable x and y impact the principle components.The arrows are bit farther away from each other, indicating that they are not that correlated after all.*
+
 #### Calculus-Based Probability & Statistics
-Many times, it makes sense to fit a closed form distribution to data. For your variable that is skewed to the right, shift it so that the minimum value is above zero. Then load the MASS package and run fitdistr to fit an exponential probability density function. (See  https://stat.ethz.ch/R-manual/R-devel/library/MASS/html/fitdistr.html). Find the optimal value for this distribution, and then take 1000 samples from this exponential distribution using this value (e.g., rexp(1000)). Plot a histogram and compare it with a histogram of your original variable. Using the exponential pdf, find the 5th and 95th percentiles using the cumulative distribution function (CDF). Also generate a 95% confidence interval from the empirical data, assuming normality. Finally, provide the empirical 5th percentile and 95th percentile of the data. Discuss.
+Many times, it makes sense to fit a closed form distribution to data. For your variable that is skewed to the right, shift it so that the minimum value is above zero. Then load the MASS package and run fitdistr to fit an exponential probability density function. (See [MASS](https://stat.ethz.ch/R-manual/R-devel/library/MASS/html/fitdistr.html)). Find the optimal value for this distribution, and then take 1000 samples from this exponential distribution using this value (e.g., rexp(1000)). Plot a histogram and compare it with a histogram of your original variable. Using the exponential pdf, find the 5th and 95th percentiles using the cumulative distribution function (CDF). Also generate a 95% confidence interval from the empirical data, assuming normality. Finally, provide the empirical 5th percentile and 95th percentile of the data. Discuss.
 ```{r}
 # run fitdistr function and extract the lambda value
 exp_variable_x <- fitdistr(variable_x, "exponential")
@@ -248,11 +276,10 @@ sample_x <- rexp(sample_size, rate = lambda_x) %>%
   as.data.frame()
 colnames(sample_x) <- c("sample_value")
 
-
+# exponential histogram
 exp_variable_x_histogram <- ggplot(sample_x,aes(x = sample_value)) +
   geom_histogram(colour = 4, fill = "white") +
   theme_minimal() 
-
 
 #plot between the original and exponential
 par(mfrow=c(1,2))
@@ -260,10 +287,40 @@ variable_x_histgram + ggtitle("Original Distribution")
 exp_variable_x_histogram + ggtitle("Exponential Distribution")
 ```
 
+```{r cdf_quantile, message=FALSE, warning=FALSE}
+cdf_quantile <- quantile(sample_x$sample_value, probs=c(0.05, 0.95))
+cdf_quantile
+```
+
+*Using the exponential PDF and the CDF, the 5th and 95th percentiles are 445.33 and 31512.02 respectively.*
+```{r}
+# 95% CI based on the empirical data
+mean_var_x <- mean(variable_x)
+std_var_x <- sd(variable_x)
+size_var_x <- length(variable_x)
+z <- qnorm(1 - 0.05/2)
+
+# identify the upper and lower bound
+lower_ci_var_x <- mean_var_x - z * (std_var_x / sqrt(size_var_x))
+upper_ci_var_x <- mean_var_x + z * (std_var_x / sqrt(size_var_x))
+
+# quantile on variable x
+empirical_quantile <- quantile(variable_x, probs=c(0.05, 0.95))
+
+round(lower_ci_var_x)
+round(upper_ci_var_x)
+empirical_quantile
+```
+
+*Based on the empirical data, the lower and upper bound CI is 10005 and 11029 respectively. For the 5th and 95th percentiles, it is 3311.7 and 17401.15 respectively. Compared to the exponential value, there is a significant movement.*
+
 #### Modeling
 Build some type of regression  model and submit your model to the competition board. Provide your complete model summary and results with analysis. Report your Kaggle.com user name and score.
-```{r}
+```{r linear_regression, message=FALSE, warning=FALSE}
+# linear regression model on training data
+training_lm <- lm (variable_y ~ variable_x, data = training_data)
 
+summary(training_lm)
 ```
 
 
