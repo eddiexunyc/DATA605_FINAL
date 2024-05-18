@@ -5,7 +5,7 @@ date: "`r Sys.Date()`"
 output: html_document
 ---
 
-### Final
+### House Prices: Advanced Regression Techniques
 Your final is due by the end of day on 19 May This project will show off your ability to understand the elements of the class. You are to register for Kaggle.com (free) and compete in the House Prices: Advanced Regression Techniques competition, [Kaggle Link](https://www.kaggle.com/c/house-prices-advanced-regression-techniques). I want you to do the following.
 
 #### Load Dependencies
@@ -139,7 +139,7 @@ chi_result <- chisq.test(variable_x, variable_y)
 chi_result
 ```
 
-*Based on the result and the critical value for the chi-square test is typically 0.05, the p-value is greater than the critical value. From there, the test rejected the mathematics evaluation and the null hypothesis is rejected.*
+*Based on the result and the critical value for the chi-square test is typically 0.05, the p-value is significant less than the critical value. From there, the test rejected the mathematics evaluation and the null hypothesis is rejected.*
 
 #### Descriptive and Inferential Statistics
 Provide univariate descriptive statistics and appropriate plots for the training data set. Provide a scatter plot of X and Y. Provide a 95% CI for the difference in the mean of the variables. Derive a correlation matrix for two of the quantitative variables you selected. Test the hypothesis that the correlation between these variables is 0 and provide a 99% confidence interval. Discuss the meaning of your analysis.
@@ -322,6 +322,125 @@ training_lm <- lm (variable_y ~ variable_x, data = training_data)
 
 summary(training_lm)
 ```
+
+##### Regression Model
+```{r lm_plots, message=FALSE, warning=FALSE}
+# histogram on lm
+lm_histogram <- ggplot(training_lm,aes(x = training_lm$residuals)) +
+  geom_histogram(colour = 4, fill = "white") +
+  xlab("Residual on Linear Regression") +
+  theme_minimal() 
+
+par(mfrow=c(2,2))
+plot(training_lm)
+lm_histogram
+```
+
+```{r num_train_table, message=FALSE, warning=FALSE}
+# pull in all columns with numeric values
+training_data_num <- training_data %>%
+  dplyr::select(where(is.numeric))
+
+# summary
+summary(training_data_num)
+```
+
+*By pulling all columns with numeric values, it can provide a better perspective in the training set using appropriate plots. In this case, the box plot and histograms are best methods to compare all variables.*
+##### Box Plot Part 1
+```{r var_boxplot, message=FALSE, warning=FALSE}
+# boxplot
+par(mfrow=c(2,3))
+boxplot(training_data_num$MSSubClass, xlab = "The building class")
+boxplot(training_data_num$LotFrontage, xlab = "Linear feet of street connected to property")
+boxplot(training_data_num$LotArea, xlab = "Lot size in square feet")
+boxplot(training_data_num$OverallQual, xlab = "Overall material and finish quality")
+boxplot(training_data_num$OverallCond, xlab = "Overall condition rating")
+boxplot(training_data_num$MasVnrArea, xlab = "Masonry veneer area in square feet")
+```
+
+##### Box Plot Part 2
+```{r var_boxplot2, message=FALSE, warning=FALSE}
+# box plot part 2
+par(mfrow=c(2,3))
+boxplot(training_data_num$BsmtFinSF1, xlab = "Type 1 finished square feet")
+boxplot(training_data_num$BsmtFinSF2, xlab = "Type 2 finished square feet")
+boxplot(training_data_num$BsmtUnfSF, xlab = "Unfinished square feet of basement area")
+boxplot(training_data_num$TotalBsmtSF, xlab = "Overall material and finish quality")
+boxplot(training_data_num$X1stFlrSF, xlab = "First Floor square feet")
+boxplot(training_data_num$X2ndFlrSF, xlab = "Second Floor square feet")
+```
+
+##### Box Plot Part 3
+```{r var_boxplot3, message=FALSE, warning=FALSE}
+# box plot part 3
+par(mfrow=c(2,3))
+boxplot(training_data_num$LowQualFinSF, xlab = "Low quality finished square feet (all floors)")
+boxplot(training_data_num$GrLivArea, xlab = "Above grade (ground) living area square feet")
+boxplot(training_data_num$BsmtFullBath, xlab = "Basement full bathrooms")
+boxplot(training_data_num$BsmtHalfBath, xlab = "Basement half bathrooms")
+boxplot(training_data_num$FullBath, xlab = "Full bathrooms above grade")
+boxplot(training_data_num$HalfBath, xlab = "Half baths above grade")
+```
+
+##### Box Plot Part 4
+```{r var_boxplot4, message=FALSE, warning=FALSE}
+# boxplot part 4
+par(mfrow=c(2,3))
+boxplot(training_data_num$BedroomAbvGr, xlab = "Number of bedrooms above basement level")
+boxplot(training_data_num$KitchenAbvGr, xlab = "Number of kitchens")
+boxplot(training_data_num$TotRmsAbvGrd, xlab = "Total rooms above grade (does not include bathrooms)")
+boxplot(training_data_num$Fireplaces, xlab = "Number of fireplaces")
+boxplot(training_data_num$GarageCars, xlab = "Size of garage in car capacity")
+boxplot(training_data_num$GarageArea, xlab = "Size of garage in square feet")
+```
+
+##### Box Plot Part 5
+```{r var_boxplot5, message=FALSE, warning=FALSE}
+# boxplot part 5
+par(mfrow=c(2,3))
+boxplot(training_data_num$WoodDeckSF, xlab = "Wood deck area in square feet")
+boxplot(training_data_num$OpenPorchSF, xlab = "Open porch area in square feet")
+boxplot(training_data_num$EnclosedPorch, xlab = "Enclosed porch area in square feet")
+boxplot(training_data_num$X3SsnPorch, xlab = "Three season porch area in square feet")
+boxplot(training_data_num$ScreenPorch, xlab = "Screen porch area in square feet")
+boxplot(training_data_num$PoolArea, xlab = "Pool area in square feet")
+```
+
+##### Box Plot Part 6
+```{r var_boxplot6, message=FALSE, warning=FALSE}
+# boxplot part 6
+par(mfrow=c(1,2))
+boxplot(training_data_num$MiscVal, xlab = "$ Value of miscellaneous feature")
+boxplot(training_data_num$SalePrice, xlab = "Sale Price")
+```
+
+##### Histogram
+```{r var_histogram, message=FALSE, warning=FALSE}
+# histogram
+par(mfrow=c(2,3))
+hist(training_data_num$YearBuilt, border=F , col=rgb(0.2,0.2,0.8,0.7), xlab = "Original construction date")
+hist(training_data_num$YearRemodAdd, border=F , col=rgb(0.2,0.2,0.8,0.7), xlab = "Remodel date")
+hist(training_data_num$GarageYrBlt, border=F , col=rgb(0.2,0.2,0.8,0.7), xlab = "Year garage was built")
+hist(training_data_num$MoSold, border=F , col=rgb(0.2,0.2,0.8,0.7), xlab = "Month Sold")
+hist(training_data_num$YrSold, border=F , col=rgb(0.2,0.2,0.8,0.7), xlab = "Year Sold")
+```
+
+##### Multiple Linear Regression
+```{r multi_lm, message=FALSE, warning=FALSE}
+# multiple linear regression with numeric values
+training_lm2 <- lm(SalePrice  ~ LotFrontage + LotArea + OverallQual + OverallCond + YearBuilt + YearRemodAdd + MasVnrArea + BsmtFinSF1 + BsmtFinSF2 + BsmtUnfSF + TotalBsmtSF + X1stFlrSF + X2ndFlrSF + LowQualFinSF + GrLivArea + BsmtFullBath + BsmtHalfBath + FullBath + HalfBath + BedroomAbvGr + KitchenAbvGr + TotRmsAbvGrd + Fireplaces + GarageYrBlt + GarageCars + GarageArea + WoodDeckSF + OpenPorchSF + EnclosedPorch + ScreenPorch + PoolArea + MiscVal + MoSold + YrSold, data = training_data_num)
+
+summary(training_lm2)
+```
+
+*With the multiple regression model, it accounts for estimated 80% of the variance. The plots below will show how it is presented.*
+##### Multiple Linear Regression Plots
+```{r multi_lm_plot, message=FALSE, warning=FALSE}
+par(mfrow=c(2,2))
+plot(training_lm2)
+```
+
+
 
 
 
