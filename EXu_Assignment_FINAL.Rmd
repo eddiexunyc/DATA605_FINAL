@@ -18,6 +18,7 @@ library(reshape2)
 library(MASS)
 library(devtools)
 library(ggbiplot)
+library(zoo)
 
 # load data
 training_data <- read.csv("https://raw.githubusercontent.com/eddiexunyc/DATA605_FINAL/main/Resources/train.csv")
@@ -340,7 +341,7 @@ lm_histogram
 ```{r num_train_table, message=FALSE, warning=FALSE}
 # pull in all columns with numeric values
 training_data_num <- training_data %>%
-  dplyr::select(where(is.numeric))
+  dplyr::select(where(is.numeric), -Id) 
 
 # summary
 summary(training_data_num)
@@ -428,42 +429,56 @@ hist(training_data_num$YrSold, border=F , col=rgb(0.2,0.2,0.8,0.7), xlab = "Year
 
 ##### Multiple Linear Regression
 ```{r multi_lm, message=FALSE, warning=FALSE}
+# replace NA value in training data with the mean of the column
+training_data_revised <- training_data_num %>%
+  mutate_all(~ifelse(is.na(.x), mean(.x, na.rm = TRUE), .x))
+
 # multiple linear regression with numeric values
-training_lm2 <- lm(SalePrice  ~ LotFrontage + OverallQual + OverallCond + YearBuilt + YearRemodAdd + MasVnrArea + BsmtFinSF1 + BsmtFinSF2 + BsmtUnfSF + TotalBsmtSF + X1stFlrSF + X2ndFlrSF + LowQualFinSF + GrLivArea + BsmtFullBath + BsmtHalfBath + FullBath + HalfBath + BedroomAbvGr + KitchenAbvGr + TotRmsAbvGrd + Fireplaces + GarageYrBlt + GarageCars + GarageArea + WoodDeckSF + OpenPorchSF + EnclosedPorch + ScreenPorch + PoolArea + MiscVal + MoSold + YrSold, data = training_data_num)
+training_lm2 <- lm(SalePrice ~ LotFrontage + OverallQual + OverallCond + YearBuilt + YearRemodAdd + MasVnrArea + BsmtFinSF1 + BsmtFinSF2 + BsmtUnfSF + X1stFlrSF + X2ndFlrSF + LowQualFinSF + BsmtFullBath + BsmtHalfBath + FullBath + HalfBath + BedroomAbvGr + KitchenAbvGr + TotRmsAbvGrd + Fireplaces + GarageYrBlt + GarageCars + GarageArea + WoodDeckSF + OpenPorchSF + EnclosedPorch + ScreenPorch + PoolArea + MiscVal + MoSold + YrSold + TotalBsmtSF + GrLivArea , data = training_data_revised)
 
 # summary
 summary(training_lm2)
 ```
 
-*With the multiple regression model, it accounts for estimated 80% of the variance and the plots below will show how it is presented.*
+*With the multiple regression model, it accounts for estimated 80% of the variance. Given some variables and its P-values are NULL and are higher than the critical value(0.05), those variables will be removed to retrain the model.*
+```{r}
+# multiple linear regression with revised variables
+training_lm3 <- lm(SalePrice ~ OverallQual + OverallCond + YearBuilt + MasVnrArea + BsmtFinSF1 + BsmtFinSF2 + BsmtUnfSF + X1stFlrSF + X2ndFlrSF + BsmtFullBath + BedroomAbvGr + KitchenAbvGr + TotRmsAbvGrd + Fireplaces + GarageYrBlt + GarageCars + WoodDeckSF + ScreenPorch, data = training_data_revised)
+
+# summary
+summary(training_lm3)
+```
 
 ##### Multiple Linear Regression Plots
 ```{r multi_lm_plot, message=FALSE, warning=FALSE}
 par(mfrow=c(2,2))
-plot(training_lm2)
+plot(training_lm3)
 ```
 
-*With the model, the test data will be used to help predict the Sale Price. Data wrangling will be used to replacing NA values with 0. and only columns with numeric values are selected.*
+*With the model, the test data will be used to help predict the Sale Price. Data wrangling will be used to replacing NA values with the mean. and only columns with numeric values are selected.*
 ```{r test_data, message=FALSE, warning=FALSE}
 # data wrangling on test data
-test_data_revised <- test_data %>% 
-  replace(is.na(.), 0) %>%
+test_data_revised <- test_data %>%
+  mutate_all(~ifelse(is.na(.x), mean(.x, na.rm = TRUE), .x)) %>%
   dplyr::select(where(is.numeric))
-
-# summary
-summary(test_data_revised)
 ```
 
 ##### Sale Price Predictions and write the CSV file
 ```{r prediction_write_csv, message=FALSE, warning=FALSE}
 # sale price prediction
 kaggle_submission <- test_data_revised %>%
-  mutate(predict_value = predict(training_lm2, newdata = test_data_revised)) %>%
+  mutate(predict_value = predict(training_lm3, newdata = test_data_revised)) %>%
   dplyr::select(c('Id', predict_value))
 
+summary(kaggle_submission)
+```
+
+```{r csv_export, warning=FALSE, message=FALSE}
 # export csv
 kaggle_submission <- rename(kaggle_submission, SalePrice=predict_value)
 write.csv(kaggle_submission, "Resources/kaggle_submission.csv", row.names = FALSE)
 ```
 
 ##### Result
+*My kaggle username is eddiexunyc and the lowest public score i was able to get is 0.33918.*
+![](Kaggle Score.PNG)
